@@ -1,0 +1,895 @@
+<!Doctype html>
+<html lang="en-US">
+
+<head>
+    <title>Oceania</title>
+    <meta charset="utf-8">
+    <meta name="author" content="SimpleDzn">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="description" content="Geography game to learn the location of countries in the world.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&display=swap" rel="stylesheet">
+
+    <script src="js/d3.v5.min.js"></script>
+    <script src="js/topojson.v2.min.js"></script>
+    <script src="js/sweetalert2.js"></script>
+    <style>
+        :root {
+            --svg-width: 80%;
+            --details-div-width: 80%;
+            --details-display: inline-block;
+            --heading-font-size: 24px;
+        }
+
+        @media only screen and (min-width: 320px) and (max-width: 720px) {
+            :root {
+                --svg-width: 100%;
+                --details-div-width: 100%;
+                --details-display: none;
+                --display: inline-block;
+                --heading-font-size: 18px;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            body, .restart {
+                padding: 0 10%;
+            }
+        }
+
+        @media (min-width: 1900px) {
+            body, .restart {
+                padding: 0 15%;
+            }
+        }
+
+        @media (min-width: 2560px) {
+            body, .restart {
+                padding: 0 25%;
+            }
+        }
+
+        body {
+            margin: 5px;
+            height: 98vh !important;
+            font-family: sans-serif;
+        }
+
+        @media (max-width: 1200px) {
+            body {
+                height: 100% !important;
+            }
+        }
+
+        .addDarkGradient {
+            background-color: #FF5ACD;
+            background: -webkit-linear-gradient(to right, #FF5ACD, #FBDA61); /* Chrome 10-25, Safari 5.1-6 */
+            background: linear-gradient(to right, #FF5ACD, #FBDA61); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+        }
+
+        .addLightGradient {
+            background: #FF5ACD; /* fallback for old browsers */
+            background: -webkit-linear-gradient(to right, #FBDA61, #FF5ACD); /* Chrome 10-25, Safari 5.1-6 */
+            background: linear-gradient(to right, #FBDA61, #FF5ACD); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+        }
+
+        h1, h3 {
+            text-align: center;
+        }
+
+        #country-name {
+            margin: 0px;
+            font-size: 36px;
+            color: #fff;
+
+        }
+
+        #tooltip {
+            position: absolute;
+            background-color: #33bffa;
+            color: #ffffff;
+            font-size: 15px;
+            max-width: 200px;
+            padding: 5px;
+            border: 1px solid #4694d2;
+            border-radius: 2px;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #points-holder { padding-right: 10px;
+            margin: 0;
+            color: #fff;
+            font-weight: bold;
+
+        }
+
+        #questions-holder {
+            color: #dbe6ec;
+            display: none;
+        }
+
+        #time-holder { padding-left: 10px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        #attempts-holder {
+            color: #dbe6ec;
+            display: none;
+        }
+
+        .pathWithBorder {
+            paint-order: stroke fill;
+            stroke-width: .2;
+            stroke: rgba(251, 251, 251, 0.42);
+        }
+
+        .centroid {
+            border-color: green !important;
+            border: 2px solid green !important;
+            background-color: #c8d1d7 !important;
+        }
+
+        .wrong-choice-effects {
+            fill: #fa577a !important;
+            paint-order: normal !important;
+            stroke-width: 1.0 !important;
+            stroke: #fa577a !important;
+        }
+
+        .choice-hover-effects {
+            fill: #fff !important;
+            paint-order: normal !important;
+            stroke-width: 1 !important;
+            stroke: #ffe794 !important;
+        }
+
+        .correct-choice-effects {
+            fill: #f242bc  !important;
+            paint-order: normal !important;
+            stroke-width: 1.5 !important;
+            stroke: #ffeca4 !important;
+        }
+
+        .blinking-effect {
+            paint-order: normal !important;
+            stroke-width: 2.5 !important;
+            stroke: #ffffff !important;
+        }
+
+        #zoom-in-text {
+            display: none
+            /*transform: translate(var(--zoom-text-x-pos, 42px), 268px);*/
+            /*font-size: 20px;*/
+            /*font-weight: bold;*/
+            /*cursor: zoom-in;*/
+        }
+
+        #zoom-out-text {
+            display: none
+        }
+
+    .zoom-out-position {
+            display: none
+        }
+
+        .zoom-in-position {
+            display: none
+        }
+
+        #details-div {
+            width: var(--svg-width, 80%);
+            color: #fff;
+            font-family: sans-serif;
+            height: 8vh;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sm-hidden {
+            display: var(--details-display, none);
+        }
+
+        svg {
+            background-color: transparent !important;
+            border-top-left-radius: 18px 18px;
+            border-top-right-radius: 18px 18px;
+        }
+
+        #svg-holder {
+            width: 100% !important;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+
+        .stop-pointer-events {
+            pointer-events: none;
+        }
+
+        .show-display {
+            display: block !important;
+        }
+
+        .hide-display {
+            display: none !important;
+        }
+
+
+        /* x-mark or wrong choice symbol CSS */
+        /*@media only screen and (min-width: 599px) and (max-width: 2080px) {*/
+        .x-mark {
+            position: absolute;
+            margin: auto;
+            top: 0px;
+            right: 0;
+            bottom: 0;
+            left: 5px;
+            height: 10px;
+            width: 10px;
+            transform: rotate(-45deg);
+        }
+
+        .x-mark:after {
+            background-color: #ff5d90;
+            content: "";
+            border-radius: 2%;
+            position: absolute;
+            width: 20px;
+            height: 5px;
+            top: 0px;
+            left: -7px;
+            animation-name: color;
+            animation-duration: 1s;
+            animation-iteration-count: infinite;
+        }
+
+        .x-mark:before {
+            background-color: #FF5D90;
+            content: "";
+            border-radius: 2%;
+            position: absolute;
+            height: 20px;
+            width: 5px;
+            top: -7px;
+            left: 0;
+            animation-name: color;
+            animation-duration: 1s;
+            animation-iteration-count: infinite;
+        }
+
+        .x-mark-zoom-in-out {
+            animation-name: zoom-in-out;
+            animation-duration: 1.8s;
+            animation-iteration-count: infinite;
+        }
+
+        @keyframes zoom-in-out {
+            0% {
+                transform: scale(0.6) rotate(-45deg);
+            }
+            25% {
+                transform: scale(0.8) rotate(-45deg);
+            }
+            50% {
+                transform: scale(1) rotate(-45deg);
+            }
+            75% {
+                transform: scale(0.8) rotate(-45deg);
+            }
+            100% {
+                transform: scale(0.6) rotate(-45deg);
+            }
+        }
+        #x-mark-holder {
+            position: absolute !important;
+            margin: auto;
+            height: 100px;
+            width: 100px;
+            border: 2px solid #FF5D90;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.62);
+            top: 30%;
+            left: 30%;
+            z-index: 1;
+            overflow: hidden !important;
+        }
+
+        /*LOGO*/
+
+        @media (min-width: 1200px) {
+            .game-area-svg {
+                height: 86vh;
+                width: var(--svg-width, 100%);
+            }
+
+            div.logo {
+                margin-top: 60%;
+                float: left;
+            }
+
+            img.logo {
+                max-width: 100px;
+            }
+
+            p.tapdescrip {
+                font-size: 1.1em;
+                text-align: center;
+                margin-left: -55%;
+                color: #fafafa;
+            }
+
+            p.tapmap {
+                margin: 10% 10% 5% -45%;
+                font-family: 'Cinzel', serif;
+                font-size: 2.2em;
+                text-align: center;
+                color: #ffffff;
+                letter-spacing: 10px
+            }
+        }
+
+        @media (max-width: 1199px) {
+            .game-area-svg {
+                height: 64vh !important;
+                width: 110vw !important;
+            }
+
+            div.logo {
+                display: none;
+            }
+
+            p.tapdescrip {
+                display: none;
+            }
+
+            p.tapmap {
+                display: none;
+            }
+
+            div.logomobile {
+                text-align: center;
+
+                width: 100% !important;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding-bottom: 3em;
+            }
+
+            img.logomobile {
+                max-width: 100px;
+                padding: 25px
+            }
+
+            p.tapdescripmobile {
+                font-size: 1.1em;
+                text-align: center;
+                color: #e3eff5;
+                padding-bottom: 7px;
+            }
+
+            p.tapmapmobile {
+                font-size: 2.2em;
+                font-family: 'Cinzel', serif;
+                text-align: center;
+                color: #edf9ff;
+                letter-spacing: 10px;
+                margin: 0;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            div.logomobile {
+                display: none;
+            }
+
+            p.tapdescripmobile {
+                display: none;
+            }
+
+            p.tapmapmobile {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .game-area-svg {
+                height: 48vh !important;
+                width: 63vw !important;
+            }
+        }
+
+        @media (max-width: 800px) {
+            .game-area-svg {
+                height: 48vh !important;
+                width: 90vw !important;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .game-area-svg {
+                height: 74vh !important;
+            }
+        }
+
+        a {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        button.btn {
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: bolder;
+            background: #ffffff47;
+            padding: 15px 20px;
+            color: #fff;
+        }
+
+        .restart {
+            position: absolute;
+            top: 125px;
+            left: 180px;
+        }
+
+        svg g {
+            transform: scale(3.2);
+            transform-origin: 1106px 350px;
+        }
+
+        @media (max-width: 801px) {
+
+            #country-name {
+                font-size: 2em;
+            }
+        }
+
+        @media (max-width: 599px) {
+            .restart {
+                top: 440px;
+                left: 100px;
+            }
+        }
+
+        @media (max-width: 499px) {
+            svg g {
+
+                /*aspect-ratio: 1.4 / 1.2;*/
+                width: var(--svg-width, 100%);
+            }
+
+            svg g {
+                transform: scale(2.2);
+                transform-origin: 1429px 435px;
+            }
+
+            .restart {
+                top: 350px;
+                left: 50px;
+            }
+
+            #country-name {
+                font-size: 1.6em;
+            }
+        }
+        @media (max-width: 350px) {
+            #country-name {
+                font-size: 24px;
+            }
+        }
+
+        /*Sweetalert*/
+        .swal2-title {
+            color: #595959;
+            font-size: 1.3em !important;
+        }
+
+        .swal2-title > a {
+            color: #595959;
+            font-size: 24px !important;
+        }
+
+        .swal2-styled.swal2-confirm {
+            background-color: #7cd1f9;
+            display: none !important;
+        }
+
+
+        button.sweet2 {
+            background-color: #7cd1f9;
+            outline: none;
+            color: #fff;
+            border: none;
+            width: 350px;
+            box-shadow: none;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 20px;
+            padding: 16px 24px;
+            margin: 20px 10px 0;
+            cursor: pointer;
+        }
+
+
+        @media (max-width: 600px) {
+            button.sweet2 {
+                width: 250px;
+            }
+        }
+
+        .logo > a {
+            position: relative;
+            z-index: 10;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div id="details-div">
+    <p id="time-holder">T<span class="sm-hidden">ime</span>: <span id="time">10</span>s</p>
+    <p id="attempts-holder">A<span class="sm-hidden">ttempts</span>: <span id="attmepts">3</span></p>
+    <h2 id="country-name">Click PLAY AGAIN</h2>
+    <p id="questions-holder">Q<span class="sm-hidden">uestions</span>: <span id="questions">10</span></p>
+    <p id="points-holder">S<span class="sm-hidden">core</span>: <span id="points">0</span></p>
+
+    <div class="logo">
+        <a href="./index.html">
+            <img class="logo" title="MORE CONTINENTS" src="images/logo.png">
+        <p class="tapmap">TAPMAP</p></a>
+        <p class="tapdescrip">Locate 10 countries<br/> as fast as you can. </p>
+    </div>
+</div>
+
+<div id="svg-holder"></div>
+
+<!--Mobile Logo-->
+<div class="logomobile">
+    <p class="tapdescripmobile">Locate 10 countries<br> as fast as you can</p>
+    <a href="./index.html">
+        <p class="tapmapmobile">TAPMAP</p>
+        <img class="logomobile" src="images/logo.png"></a>
+</div>
+
+<div class="restart">
+    <button class="btn"><a href="https://tapmap.simpledzn.com/oceania.html">PLAY<br/>AGAIN</a></button>
+</div>
+
+<div class="hide-display" id="x-mark-holder">
+    <div class="x-mark x-mark-zoom-in-out"></div>
+</div>
+<script>document.addEventListener("DOMContentLoaded", () => {
+    let countryDataPromise = fetch("json/oceania.json");
+
+    Promise.resolve(countryDataPromise).then(responses => responses.text()).then(data => {
+        loadMap(data);
+    });
+});
+</script>
+<script>
+    let loadMap = countryDetails => {
+
+        const countryData = JSON.parse(countryDetails);
+        let svg = loadSvg();
+        let path = d3.geoPath().projection(d3.geoMercator());
+        let tooltip = loadTooltip();
+        let gElement = svg.append("g").attr("id", "g-element").selectAll("path").data(topojson.feature(countryData, countryData.objects.countries1).features).enter().append("path").attr("name", (d, i) => countryData.objects.countries1.geometries[i].properties.name).attr("class", "pathWithBorder").attr("fill", d => getRandomFillColor()).attr("d", path);
+
+        let pElement = svg.append("g");
+        let zoomed = () => {
+            gElement.attr("transform", d3.event.transform);
+            pElement.attr("transform", d3.event.transform);
+        };
+        let screenWidth = Math.max(1080 || document.documentElement.clientWidth, window.innerWidth);
+        let screenHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+        loadNewCountry(countryData, svg, gElement, pElement, 0, 1, []);
+
+    };
+
+    let loadSvg = () => {
+        return d3.select("#svg-holder").append("svg").attr("class", "game-area-svg");
+    };
+    /** Return tooltip that will show information about a rectangle when it is hovered.*/
+    let loadTooltip = () => {
+        return d3.select("body").append("div").style("visibility", "hidden").attr("id", "tooltip");
+    };
+    let loadNewCountry = (countryData, svg, gElement, pElement, points, questionNo, alreadyDisplayedCountry) => {
+        if (questionNo > getTotalQuestions()) {
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Would you like to<br/><a href="https://tapmap.simpledzn.com/oceania.html"><button class="sweet2">PLAY AGAIN</button></a><br/>' +
+                    '<a href="https://tapmap.simpledzn.com"><button class="sweet2">STUDY OTHER CONTINENTS</button></a>',
+            })
+
+            return;
+        }
+
+        updateQuestionsLeft(questionNo);
+        resetAttemptsLeft();
+        updateCompletionIndicator(questionNo);
+        alterBackgroundGradient(questionNo);
+        let noOfAttempts = 0;
+        let countryName = getUniqueRandomCountryName(countryData, alreadyDisplayedCountry);
+        alreadyDisplayedCountry.push(countryName);
+        hideCountryRegionArc();
+        showCountryName(countryName);
+        d3.select("#tooltip").style("visibility", "hidden");
+
+        let timeForQuestion = 10;
+        var timeCounterInterval = setTimeCounterInterval(timeForQuestion);
+        setTimeout(() => {
+            if (noOfAttempts < 2) {
+                stopInterval(timeCounterInterval, noOfAttempts);
+                // playWrongAnswerAudio();
+                showXMark();
+                showCorrectAnswerAndLoadNewCountry(countryData, svg, gElement, pElement, points, questionNo + 1, alreadyDisplayedCountry, countryName);
+            }
+        }, timeForQuestion * 1000);
+
+        let userSelectedLastChoice;
+        let userHoveredLastChoice;
+        gElement.on("click", (d, i, nodes) => {
+            noOfAttempts++;
+            updateAttemptsLeft(noOfAttempts);
+            let userSelectedCountry = nodes[i]; // nodes[i] refer to the clicked element
+            removeOldColorOnUserSelectedCountry(userSelectedLastChoice);
+            removeOldColorOnUserHoverCountry(userHoveredLastChoice);
+
+            userSelectedLastChoice = userSelectedCountry;
+            if (noOfAttempts === 1)
+                showCountryRegionArc(countryData, countryName, pElement, noOfAttempts); else if (noOfAttempts === 2) {
+                hideCountryRegionArc();
+                showCountryRegionArc(countryData, countryName, pElement, noOfAttempts);
+            }
+            addColorOnUserSelectedCountry(userSelectedCountry);
+            showTooltip(d3.select(userSelectedCountry).attr("name"));
+            let screenWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            if (screenWidth <= 980) {
+                setTimeout(() => {
+                    hideTooltip();
+                }, 800);
+            }
+            if (d3.select(userSelectedCountry).attr("name") === countryName) {
+                stopInterval(timeCounterInterval, noOfAttempts);
+                points = points + 30 - 20 * (noOfAttempts - 1);
+                updatePoints(points);
+                removeOldColorOnUserSelectedCountry(userSelectedCountry); // removing present choice
+                noOfAttempts = 2;
+                showCorrectAnswerAndLoadNewCountry(countryData, svg, gElement, pElement, points, questionNo + 1, alreadyDisplayedCountry, countryName);
+
+                return;
+            }
+
+            if (areAllAttemptsExhausted(noOfAttempts)) {
+                stopInterval(timeCounterInterval, noOfAttempts);
+                removeOldColorOnUserSelectedCountry(userSelectedCountry);
+                noOfAttempts = 2;
+                showXMark();
+                showCorrectAnswerAndLoadNewCountry(countryData, svg, gElement, pElement, points, questionNo + 1, alreadyDisplayedCountry, countryName);
+            }
+
+        });
+        gElement.on("mouseover", (d, i, nodes) => {
+            let userHoverCountry = nodes[i]; // nodes[i] refer to the clicked element
+            addColorOnUserHoverCountry(userHoverCountry);
+            if (noOfAttempts === 1) {
+                let userHoverCountryName = d3.select(userHoverCountry).attr("name");
+                showTooltip(userHoverCountryName);
+            }
+            userHoveredLastChoice = userHoverCountry;
+        });
+        gElement.on("mouseout", d => {
+            hideTooltip();
+            removeOldColorOnUserHoverCountry(userHoveredLastChoice);
+        });
+    };
+
+
+    let showCorrectAnswerAndLoadNewCountry = (countryData, svg, gElement, pElement, points, questionNo, alreadyDisplayedCountry, countryName) => {
+        stopAllMousePointerEvents();
+        highlightCorrectAnswer(countryName, countryData);
+        setTimeout(() => {
+            hideXMark();
+            resumeAllMousePointerEvents();
+            loadNewCountry(countryData, svg, gElement, pElement, points, questionNo, alreadyDisplayedCountry);
+        }, 500);
+    };
+
+    let highlightCorrectAnswer = (countryName, countryData) => {
+        for (let i = 0; i < 12; i++) {
+            if (countryData.objects.countries1.geometries[i].properties.name === countryName) {
+                let correctAnswerElement = d3.select("#g-element").selectAll("path").filter(d => d.properties.name === countryName);
+                correctAnswerElement.classed('blinking-effect', true);
+                let darkColorInterval = setInterval(() => {
+                    correctAnswerElement.attr("fill", "#fff1a0");
+                }, 250);
+                let lightColorInterval = setInterval(() => {
+                    correctAnswerElement.attr("fill", "#ffffff");
+                }, 500);
+                setTimeout(() => {
+                    clearInterval(darkColorInterval);
+                    clearInterval(lightColorInterval);
+                    correctAnswerElement.classed('blinking-effect', false);
+                    addColorOnCorrectCountry(correctAnswerElement);
+                }, 1000);
+
+                break;
+            }
+        }
+    };
+
+    let getUniqueRandomCountryName = (countryData, alreadyDisplayedCountry) => {
+        let noOfCountries = countryData.objects.countries1.geometries.length;
+        let randomCountrySNo = getRandomInteger(noOfCountries);
+        let knownCountryBuffer = [1, 3, 5, 7, 9, 11, 13];
+        if (getRandomInteger(20) % 2 === 0)
+            randomCountrySNo = knownCountryBuffer[getRandomInteger(knownCountryBuffer.length)];
+        let countryName = countryData.objects.countries1.geometries[randomCountrySNo].properties.name;
+        if (alreadyDisplayedCountry.includes(countryName))
+            return getUniqueRandomCountryName(countryData, alreadyDisplayedCountry);
+
+        return countryName;
+    };
+    let getRandomInteger = maxOfRange => {
+        return Math.floor(Math.random() * Math.floor(maxOfRange));
+    };
+    let showCountryName = countryName => {
+        d3.select("#country-name").text(countryName);
+    };
+    let hideCountryRegionArc = () => {
+        d3.select(".country-region").remove();
+    };
+    let showCountryRegionArc = (countryData, countryName, pElement, noOfAttempts) => {
+        for (let i = 0; i < 12; i++) {
+            if (countryData.objects.countries1.geometries[i].properties.name === countryName) {
+                let arcData = countryData.objects.countries1.geometries[i].arcs;
+                let arcDataTemplate = JSON.parse(`{"type":"GeometryCollection","geometries":[{"arcs":[[${arcData}]],"type":"Polygon"}]}`);
+                let path = d3.geoPath().projection(d3.geoMercator());
+                let centroids = topojson.feature(countryData, arcDataTemplate).features.map(feature => {
+                    return path.centroid(feature);
+                });
+
+                // Smaller arc
+                let arcInnerRadius = 50;
+                let arcOuterRadius = 52;
+                let errorRange = 0;
+                let screenWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                if (noOfAttempts === 1 && screenWidth >= 720) {
+                    arcInnerRadius = 40;
+                    arcOuterRadius = 42;
+                } else if (noOfAttempts === 1 && screenWidth < 720) {
+                    arcInnerRadius = 30;
+                    arcOuterRadius = 32;
+                    errorRange = 0;
+                }
+
+                let arc = d3.arc().innerRadius(arcInnerRadius).outerRadius(arcOuterRadius);
+                let errorX = getRandomInteger(errorRange);
+                let errorY = getRandomInteger(errorRange);
+                errorX *= Math.floor(Math.random() * 2) === 1 ? 1 : -1;
+                errorY *= Math.floor(Math.random() * 2) === 1 ? 1 : -1;
+
+                let sector = pElement.append("path").attr("fill", "white").attr("class", "country-region").attr("stroke-width", 1).attr("stroke", "darkslategray").attr("d", arc({
+                    startAngle: 0,
+                    endAngle: 2 * Math.PI
+                })).attr("transform", `translate(${centroids[0][0] + errorX},${centroids[0][1] + errorY})`);
+
+                break;
+            }
+        }
+
+    };
+    let addColorOnUserSelectedCountry = userSelectedCountry => {
+        d3.select(userSelectedCountry).classed('wrong-choice-effects', true);
+    };
+    let removeOldColorOnUserSelectedCountry = userSelectedLastChoice => {
+        d3.select(userSelectedLastChoice).classed('wrong-choice-effects', false);
+    };
+    let addColorOnUserHoverCountry = userHoverCountry => {
+        d3.select(userHoverCountry).classed('choice-hover-effects', true);
+    };
+    let removeOldColorOnUserHoverCountry = userHoverLastChoice => {
+        d3.select(userHoverLastChoice).classed('choice-hover-effects', false);
+    };
+    let addColorOnCorrectCountry = userSelectedCountry => {
+        userSelectedCountry.classed('correct-choice-effects', true);
+    };
+    let updatePoints = points => {
+        d3.select("#points").text(points);
+    };
+    let updateQuestionsLeft = qno => {
+        d3.select("#questions").text(10 - qno);
+    };
+    let updateAttemptsLeft = attemptNo => {
+        d3.select("#attmepts").text(2 - attemptNo);
+    };
+    let resetAttemptsLeft = () => {
+        d3.select("#attmepts").text(2);
+    };
+    let updateTimeLeft = timeLeft => {
+        d3.select("#time").text(timeLeft);
+    };
+    let areAllAttemptsExhausted = noOfAttempts => {
+        if (noOfAttempts === 2)
+            return true;
+
+        return false;
+    };
+    let showTooltip = userHoverCountryName => {
+        d3.select("#tooltip").style("visibility", "visible").style("left", `${d3.event.pageX + 10}px`).style("top", `${d3.event.pageY - 25}px`).html(userHoverCountryName);
+    };
+    let hideTooltip = () => {
+        d3.select("#tooltip").style("visibility", "hidden");
+    };
+
+    let getRandomFillColor = () => {
+        let earthFillColor = ["#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff" ];
+        return earthFillColor[getRandomInteger(8)];
+    };
+
+    let setTimeCounterInterval = timeForQuestion => {
+        let timeLeft = timeForQuestion - 1;
+        let timeCounter = setInterval(() => {
+            updateTimeLeft(timeLeft);
+            timeLeft--;
+        }, 800);
+
+        return timeCounter;
+    };
+    let stopInterval = async (timeCounter, noOfAttempts) => {
+        clearInterval(timeCounter);
+    };
+    let updateCompletionIndicator = questionNo => {
+        let totalQuestions = getTotalQuestions();
+        d3.select("#completion-indicator").style("width", `${questionNo / totalQuestions * 100}%`);
+    };
+    let getTotalQuestions = () => {
+        return 10;
+    };
+    let alterBackgroundGradient = questionNo => {
+        if (questionNo % 2 == 0) {
+            d3.select("body").classed('addLightGradient', false);
+            d3.select("body").classed('addDarkGradient', true);
+        } else {
+            d3.select("body").classed('addDarkGradient', false);
+            d3.select("body").classed('addLightGradient', true);
+        }
+    };
+
+    let stopAllMousePointerEvents = () => {
+        d3.select("#svg-holder").classed('stop-pointer-events', true);
+    };
+
+    let resumeAllMousePointerEvents = () => {
+        d3.select("#svg-holder").classed('stop-pointer-events', false);
+    };
+
+    let showXMark = () => {
+        d3.selectAll("#x-mark-holder").classed('show-display', true);
+        d3.selectAll("#x-mark-holder").classed('hide-display', false);
+    };
+    let hideXMark = () => {
+        d3.selectAll("#x-mark-holder").classed('show-display', false);
+        d3.selectAll("#x-mark-holder").classed('hide-display', true);
+    };
+</script>
+
+</body>
+</html>

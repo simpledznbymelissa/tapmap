@@ -1,0 +1,26 @@
+{
+  "short_name": "TapMap",
+  "name": "TapMap Geography Game",
+  "icons": [
+    {
+      "src": "./images/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "./images/pwa-384x384.png",
+      "sizes": "384x384",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "./images/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#135589",
+  "background_color": "#f9fceb",
+  "orientation": "portrait-primary"
+}
